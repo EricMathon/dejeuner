@@ -242,6 +242,15 @@
 <main>
 
   <header class="head">
+
+    <div id="authBox" style="margin-bottom:16px">
+  <button id="loginBtn" type="button">
+    Se connecter avec GitHub
+  </button>
+
+  <div id="userInfo" class="muted"></div>
+  </div>
+    
     <h1>🍴 Qui mange où ?</h1>
     <p id="dateLine">Déjeuner du jour</p>
   </header>
@@ -546,6 +555,105 @@
       SUPABASE_URL,
       SUPABASE_KEY
     );
+    /*
+   * ============================================================
+   * CONNEXION GITHUB
+   * ============================================================
+   */
+
+  const loginBtn =
+    document.querySelector("#loginBtn");
+
+  const userInfo =
+    document.querySelector("#userInfo");
+
+
+  async function updateAuthUI() {
+
+    const {
+      data: {
+        session
+      }
+    } = await db.auth.getSession();
+
+
+    if (!session) {
+
+      loginBtn.style.display = "block";
+
+      userInfo.textContent =
+        "Connecte-toi avec GitHub pour répondre.";
+
+      form.style.display = "none";
+
+      return;
+
+    }
+
+
+    loginBtn.style.display = "none";
+
+    const user =
+      session.user;
+
+
+    const username =
+      user.user_metadata?.user_name ||
+      user.user_metadata?.preferred_username ||
+      user.user_metadata?.name ||
+      user.email ||
+      "Utilisateur";
+
+
+    userInfo.textContent =
+      `Connecté en tant que ${username}`;
+
+    form.style.display = "block";
+
+
+    nameInput.value =
+      username;
+
+    nameInput.readOnly = true;
+
+  }
+
+
+  loginBtn.addEventListener(
+    "click",
+    async () => {
+
+      const {
+        error
+      } = await db.auth.signInWithOAuth({
+        provider: "github",
+        options: {
+          redirectTo:
+            window.location.origin +
+            window.location.pathname
+        }
+      });
+
+
+      if (error) {
+
+        message.textContent =
+          error.message;
+
+        message.className =
+          "msg err";
+
+      }
+
+    }
+  );
+
+
+  db.auth.onAuthStateChange(
+    () => {
+      updateAuthUI();
+    }
+  );
 
 
   /*
@@ -719,8 +827,8 @@
     } = await db
       .from("lunch_responses")
       .select(
-        "id,name,eats,restaurant,lunch_date,created_at,updated_at"
-      )
+        "id,user_id,name,eats,restaurant,lunch_date,created_at,updated_at"
+      )  
       .eq(
         "lunch_date",
         today()
@@ -768,23 +876,22 @@
 
   function restoreMine() {
 
-    const savedName =
-      localStorage.getItem("lunch_name");
+  /*
+   * L'utilisateur connecté
+   */
+  db.auth.getUser().then(({ data: { user } }) => {
 
-    if (!savedName) {
+    if (!user) {
       return;
     }
 
 
-    nameInput.value =
-      savedName;
-
-
+    /*
+     * Chercher sa réponse grâce à son user_id
+     */
     const mine =
       rows.find(
-        r =>
-          r.name.toLowerCase() ===
-          savedName.toLowerCase()
+        r => r.user_id === user.id
       );
 
 
@@ -796,7 +903,6 @@
     /*
      * Restaurer Oui / Non
      */
-
     const eatsRadio =
       document.querySelector(
         `input[name="eats"][value="${
@@ -812,7 +918,6 @@
     /*
      * Restaurer le restaurant
      */
-
     if (mine.restaurant) {
 
       document
@@ -831,6 +936,8 @@
 
     updateRestaurantState();
 
+  });
+  
   }
 
 
@@ -840,18 +947,47 @@
    * ============================================================
    */
 
-  async function save(e) {
+    async function save(e) {
 
     e.preventDefault();
 
+    /*
+     * Vérifier que l'utilisateur est connecté
+     */
+    const {
+      data: {
+        user
+      }
+    } = await db.auth.getUser();
 
+    if (!user) {
+
+      message.textContent =
+        "Connecte-toi avec GitHub avant d'enregistrer.";
+
+      message.className =
+        "msg err";
+
+      return;
+    }
+
+
+    /*
+     * Nom GitHub
+     */
     const name =
-      nameInput.value.trim();
+      user.user_metadata?.user_name ||
+      user.user_metadata?.preferred_username ||
+      user.user_metadata?.name ||
+      user.email ||
+      "Utilisateur";
+
 
     const eatsValue =
       document.querySelector(
         'input[name="eats"]:checked'
       )?.value;
+
 
     const restaurant =
       document.querySelector(
@@ -863,16 +999,15 @@
      * Vérifications
      */
 
-    if (!name || !eatsValue) {
+    if (!eatsValue) {
 
       message.textContent =
-        "Complète les informations avant d'enregistrer.";
+        "Indique si tu manges ce midi.";
 
       message.className =
         "msg err";
 
       return;
-
     }
 
 
@@ -888,7 +1023,6 @@
         "msg err";
 
       return;
-
     }
 
 
@@ -907,15 +1041,15 @@
 
     /*
      * Données
-     *
-     * updated_at est volontairement mis à jour
-     * à chaque nouvelle réponse ou modification.
      */
 
     const payload = {
 
       lunch_date:
         today(),
+
+      user_id:
+        user.id,
 
       name:
         name,
@@ -935,10 +1069,8 @@
 
 
     /*
-     * UPSERT :
-     *
-     * - première réponse → création
-     * - même prénom le même jour → modification
+     * Création ou modification
+     * de SA propre réponse
      */
 
     const {
@@ -949,7 +1081,7 @@
         payload,
         {
           onConflict:
-            "lunch_date,name"
+            "lunch_date,user_id"
         }
       );
 
@@ -966,18 +1098,7 @@
         "msg err";
 
       return;
-
     }
-
-
-    /*
-     * Mémoriser le prénom
-     */
-
-    localStorage.setItem(
-      "lunch_name",
-      name
-    );
 
 
     /*
@@ -997,7 +1118,7 @@
 
     await load();
 
-  }
+    }
 
 
   /*
@@ -1110,6 +1231,8 @@
    */
 
   updateRestaurantState();
+
+  updateAuthUI();
 
   load();
 
