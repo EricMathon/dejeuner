@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+
+  <title>Qui mange où ?</title>
+
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --line: #e4e7ec;
+      --accent: #111827;
+      --accent2: #eef2ff;
+      --ok: #067647;
+      --danger: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, sans-serif;
+    }
+
+    main {
+      width: min(720px, calc(100% - 28px));
+      margin: 32px auto 48px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    .head {
+      margin-bottom: 20px;
+    }
+
+    .head h1 {
+      font-size: 28px;
+    }
+
+    .head p {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+
+    label.title {
+      display: block;
+      font-weight: 650;
+      margin-bottom: 8px;
+    }
+
+    .name {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .choices.three {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .choice {
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .choice:has(input:checked) {
+      border-color: #111827;
+      background: var(--accent2);
+      font-weight: 650;
+    }
+
+    .choice input {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .field {
+      margin-top: 18px;
+    }
+
+    .disabled {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    button {
+      border: 0;
+      border-radius: 11px;
+      padding: 13px 16px;
+      background: var(--accent);
+      color: white;
+      font-weight: 650;
+      font-size: 15px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 18px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .msg {
+      font-size: 14px;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .err {
+      color: var(--danger);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 25px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .people {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .rowhead {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      border-radius: 11px;
+      background: #f2f4f7;
+      color: #344054;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 560px) {
+      main {
+        margin-top: 20px;
+      }
+
+      .choices.three {
+        grid-template-columns: 1fr;
+      }
+
+      .summary {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .stat:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<main>
+
+  <!-- EN-TÊTE -->
+  <header class="head">
+    <h1>🍴 Qui mange où ?</h1>
+    <p id="dateLine">Déjeuner du jour</p>
+  </header>
+
+
+  <!-- FORMULAIRE -->
+  <section class="card">
+
+    <form id="form">
+
+      <!-- NOM -->
+      <label class="title" for="name">
+        Ton prénom
+      </label>
+
+      <input
+        class="name"
+        id="name"
+        maxlength="40"
+        autocomplete="name"
+        placeholder="Ex. Thomas"
+        required
+      >
+
+
+      <!-- OUI / NON -->
+      <div class="field">
+
+        <label class="title">
+          Tu manges ce midi ?
+        </label>
+
+        <div class="choices">
+
+          <label class="choice">
+            <input
+              type="radio"
+              name="eats"
+              value="yes"
+              required
+            >
+            🍽️ Oui
+          </label>
+
+          <label class="choice">
+            <input
+              type="radio"
+              name="eats"
+              value="no"
+            >
+            🏠 Non
+          </label>
+
+        </div>
+      </div>
+
+
+      <!-- RESTAURANT -->
+      <div class="field" id="restaurantWrap">
+
+        <label class="title">
+          Où tu manges ?
+        </label>
+
+        <div class="choices three">
+
+          <label class="choice">
+            <input
+              type="radio"
+              name="restaurant"
+              value="Comptoir 41"
+            >
+            Comptoir 41
+          </label>
+
+          <label class="choice">
+            <input
+              type="radio"
+              name="restaurant"
+              value="4G"
+            >
+            4G
+          </label>
+
+          <label class="choice">
+            <input
+              type="radio"
+              name="restaurant"
+              value="Divina"
+            >
+            Divina
+          </label>
+
+        </div>
+      </div>
+
+
+      <!-- BOUTON -->
+      <button
+        id="saveBtn"
+        type="submit"
+      >
+        Enregistrer ma réponse
+      </button>
+
+      <div
+        id="message"
+        class="msg"
+        aria-live="polite"
+      ></div>
+
+    </form>
+
+
+    <!-- MESSAGE APRÈS 10H -->
+    <div
+      id="closedNotice"
+      class="notice"
+      hidden
+    >
+      Les réponses sont fermées pour aujourd’hui.
+    </div>
+
+  </section>
+
+
+  <!-- RÉCAPITULATIF -->
+  <section class="card">
+
+    <div class="rowhead">
+
+      <div>
+        <h2>Récapitulatif</h2>
+
+        <div
+          class="muted"
+          id="liveStatus"
+        >
+          Chargement…
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- COMPTEURS -->
+    <div class="summary">
+
+      <div class="stat">
+        <b id="c41">0</b>
+        <span>Comptoir 41</span>
+      </div>
+
+      <div class="stat">
+        <b id="g4">0</b>
+        <span>4G</span>
+      </div>
+
+      <div class="stat">
+        <b id="divina">0</b>
+        <span>Divina</span>
+      </div>
+
+    </div>
+
+
+    <!-- PERSONNES QUI MANGENT -->
+    <div style="margin-top:20px">
+
+      <h3>
+        Personnes qui mangent
+      </h3>
+
+      <div
+        class="people"
+        id="eaters"
+      >
+        <span class="muted">
+          Aucune réponse.
+        </span>
+      </div>
+
+    </div>
+
+
+    <!-- PERSONNES QUI NE MANGENT PAS -->
+    <div style="margin-top:18px">
+
+      <h3>
+        Ne mangent pas
+      </h3>
+
+      <div
+        class="people"
+        id="notEaters"
+      >
+        <span class="muted">
+          Aucune réponse.
+        </span>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+<script>
+
+(() => {
+
+  /*
+   * ============================================================
+   * CONFIGURATION SUPABASE
+   * ============================================================
+   *
+   * NE MODIFIE PAS ENCORE CES DEUX LIGNES.
+   *
+   * Nous les remplirons ensemble lorsque Supabase sera configuré.
+   *
+   * IMPORTANT :
+   * Ne jamais mettre une clé "service_role" ici.
+   */
+
+  const SUPABASE_URL =
+    "https://adpvmvyyelspuhkzphby.supabase.co";
+
+  const SUPABASE_KEY =
+    "sb_publishable_kSQ75fw7wAVUcfBuqYsu7Q_DaTqFGeV";
+
+
+  /*
+   * ============================================================
+   * ÉLÉMENTS DE LA PAGE
+   * ============================================================
+   */
+
+  const form =
+    document.querySelector("#form");
+
+  const nameInput =
+    document.querySelector("#name");
+
+  const restaurantWrap =
+    document.querySelector("#restaurantWrap");
+
+  const saveBtn =
+    document.querySelector("#saveBtn");
+
+  const message =
+    document.querySelector("#message");
+
+  const closedNotice =
+    document.querySelector("#closedNotice");
+
+  const liveStatus =
+    document.querySelector("#liveStatus");
+
+  const dateLine =
+    document.querySelector("#dateLine");
+
+
+  /*
+   * ============================================================
+   * DATE DU JOUR
+   * ============================================================
+   */
+
+  function today() {
+
+    const d = new Date();
+
+    return `${d.getFullYear()}-${String(
+      d.getMonth() + 1
+    ).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  }
+
+
+  /*
+   * ============================================================
+   * DATE AFFICHÉE
+   * ============================================================
+   */
+
+  function frenchDate() {
+
+    return new Intl.DateTimeFormat(
+      "fr-FR",
+      {
+        weekday: "long",
+        day: "numeric",
+        month: "long"
+      }
+    ).format(new Date());
+
+  }
+
+
+  dateLine.textContent =
+    `Déjeuner du ${frenchDate()}`;
+
+
+  /*
+   * ============================================================
+   * FERMETURE DES RÉPONSES À 10H
+   * ============================================================
+   *
+   * Le formulaire est disponible avant 10h.
+   * À partir de 10h00, les réponses sont bloquées.
+   */
+
+  function isClosed() {
+  return false;
+    }
+
+
+  /*
+   * ============================================================
+   * ACTIVATION / DÉSACTIVATION DU FORMULAIRE
+   * ============================================================
+   */
+
+  function applyOpenState() {
+
+    const closed = isClosed();
+
+    closedNotice.hidden = !closed;
+
+    saveBtn.disabled = closed;
+
+    form
+      .querySelectorAll("input")
+      .forEach(input => {
+        input.disabled = closed;
+      });
+
+    if (closed) {
+
+      restaurantWrap.classList.add("disabled");
+
+    } else {
+
+      restaurantWrap.classList.remove("disabled");
+
+    }
+
+  }
+
+
+  /*
+   * ============================================================
+   * VÉRIFICATION DE LA CONFIGURATION
+   * ============================================================
+   */
+
+  const configured = true;
+
+
+  /*
+   * ============================================================
+   * SI SUPABASE N'EST PAS ENCORE CONFIGURÉ
+   * ============================================================
+   */
+
+  if (!configured) {
+
+    liveStatus.textContent =
+      "⚙️ Configuration Supabase à compléter";
+
+    message.textContent =
+      "Le formulaire est prêt. Il faut maintenant connecter Supabase.";
+
+    message.className =
+      "msg err";
+
+    applyOpenState();
+
+    return;
+
+  }
+
+
+  /*
+   * ============================================================
+   * CONNEXION À SUPABASE
+   * ============================================================
+   */
+
+  const {
+    createClient
+  } = window.supabase;
+
+  const db =
+    createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+
+  /*
+   * ============================================================
+   * DONNÉES
+   * ============================================================
+   */
+
+  let rows = [];
+
+
+  /*
+   * ============================================================
+   * PROTECTION CONTRE LE HTML
+   * ============================================================
+   */
+
+  function esc(value) {
+
+    return String(value).replace(
+      /[&<>"']/g,
+      c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[c])
+    );
+
+  }
+
+
+  /*
+   * ============================================================
+   * AFFICHAGE DES RÉSULTATS
+   * ============================================================
+   */
+
+  function render() {
+
+    const eaters =
+      rows.filter(r => r.eats);
+
+    const no =
+      rows.filter(r => !r.eats);
+
+
+    /*
+     * Comptage par restaurant
+     */
+
+    function count(restaurant) {
+
+      return eaters.filter(
+        r => r.restaurant === restaurant
+      ).length;
+
+    }
+
+
+    document.querySelector("#c41").textContent =
+      count("Comptoir 41");
+
+    document.querySelector("#g4").textContent =
+      count("4G");
+
+    document.querySelector("#divina").textContent =
+      count("Divina");
+
+
+    /*
+     * Liste des personnes qui mangent
+     */
+
+    document.querySelector("#eaters").innerHTML =
+      eaters.length
+
+        ? eaters
+            .map(
+              r =>
+                `<span class="pill">
+                  ${esc(r.name)}
+                  ·
+                  ${esc(r.restaurant)}
+                </span>`
+            )
+            .join("")
+
+        : '<span class="muted">Aucune réponse.</span>';
+
+
+    /*
+     * Liste des personnes qui ne mangent pas
+     */
+
+    document.querySelector("#notEaters").innerHTML =
+      no.length
+
+        ? no
+            .map(
+              r =>
+                `<span class="pill">
+                  ${esc(r.name)}
+                </span>`
+            )
+            .join("")
+
+        : '<span class="muted">Aucune réponse.</span>';
+
+
+    /*
+     * Statut
+     */
+
+    liveStatus.textContent =
+      `${rows.length} réponse${
+        rows.length > 1 ? "s" : ""
+      } · mise à jour en direct`;
+
+  }
+
+
+  /*
+   * ============================================================
+   * CHARGEMENT DES RÉPONSES
+   * ============================================================
+   */
+
+  async function load() {
+
+    const {
+      data,
+      error
+    } = await db
+      .from("lunch_responses")
+      .select(
+        "id,name,eats,restaurant,lunch_date"
+      )
+      .eq(
+        "lunch_date",
+        today()
+      )
+      .order(
+        "created_at",
+        {
+          ascending: true
+        }
+      );
+
+
+    if (error) {
+
+      liveStatus.textContent =
+        "Erreur de connexion à la base";
+
+      message.textContent =
+        error.message;
+
+      message.className =
+        "msg err";
+
+      return;
+
+    }
+
+
+    rows =
+      data || [];
+
+
+    render();
+
+    restoreMine();
+
+  }
+
+
+  /*
+   * ============================================================
+   * RESTAURATION DU NOM DE L'UTILISATEUR
+   * ============================================================
+   */
+
+  function restoreMine() {
+
+    const savedName =
+      localStorage.getItem("lunch_name");
+
+    if (!savedName) {
+      return;
+    }
+
+
+    nameInput.value =
+      savedName;
+
+
+    const mine =
+      rows.find(
+        r =>
+          r.name.toLowerCase() ===
+          savedName.toLowerCase()
+      );
+
+
+    if (!mine) {
+      return;
+    }
+
+
+    /*
+     * Restaurer Oui / Non
+     */
+
+    const eatsRadio =
+      document.querySelector(
+        `input[name="eats"][value="${
+          mine.eats ? "yes" : "no"
+        }"]`
+      );
+
+    if (eatsRadio) {
+      eatsRadio.checked = true;
+    }
+
+
+    /*
+     * Restaurer le restaurant
+     */
+
+    if (mine.restaurant) {
+
+      const restaurantRadio =
+        document.querySelector(
+          `input[name="restaurant"][value="${CSS.escape(
+            mine.restaurant
+          )}"]`
+        );
+
+      if (restaurantRadio) {
+        restaurantRadio.checked = true;
+      }
+
+    }
+
+
+    updateRestaurantState();
+
+  }
+
+
+  /*
+   * ============================================================
+   * ENREGISTREMENT D'UNE RÉPONSE
+   * ============================================================
+   */
+
+  async function save(e) {
+
+    e.preventDefault();
+
+
+    /*
+     * Sécurité supplémentaire
+     */
+
+    if (isClosed()) {
+      return;
+    }
+
+
+    /*
+     * Récupération des valeurs
+     */
+
+    const name =
+      nameInput.value.trim();
+
+    const eatsValue =
+      document.querySelector(
+        'input[name="eats"]:checked'
+      )?.value;
+
+    const restaurant =
+      document.querySelector(
+        'input[name="restaurant"]:checked'
+      )?.value || null;
+
+
+    /*
+     * Vérification
+     */
+
+    if (
+      !name ||
+      !eatsValue ||
+      (
+        eatsValue === "yes" &&
+        !restaurant
+      )
+    ) {
+
+      message.textContent =
+        "Complète les informations avant d'enregistrer.";
+
+      message.className =
+        "msg err";
+
+      return;
+
+    }
+
+
+    /*
+     * Désactiver le bouton pendant l'enregistrement
+     */
+
+    saveBtn.disabled = true;
+
+    message.textContent =
+      "Enregistrement…";
+
+    message.className =
+      "msg";
+
+
+    /*
+     * Données à envoyer à Supabase
+     */
+
+    const payload = {
+
+      lunch_date:
+        today(),
+
+      name:
+        name,
+
+      eats:
+        eatsValue === "yes",
+
+      restaurant:
+        eatsValue === "yes"
+          ? restaurant
+          : null
+
+    };
+
+
+    /*
+     * Une seule réponse par prénom et par jour.
+     * Si la personne répond à nouveau,
+     * sa réponse est mise à jour.
+     */
+
+    const {
+      error
+    } = await db
+      .from("lunch_responses")
+      .upsert(
+        payload,
+        {
+          onConflict:
+            "lunch_date,name"
+        }
+      );
+
+
+    saveBtn.disabled = false;
+
+
+    /*
+     * Gestion de l'erreur
+     */
+
+    if (error) {
+
+      message.textContent =
+        error.message;
+
+      message.className =
+        "msg err";
+
+      return;
+
+    }
+
+
+    /*
+     * Mémoriser le prénom dans le navigateur
+     */
+
+    localStorage.setItem(
+      "lunch_name",
+      name
+    );
+
+
+    /*
+     * Message de confirmation
+     */
+
+    message.textContent =
+      "Réponse enregistrée ✓";
+
+    message.className =
+      "msg ok";
+
+
+    /*
+     * Actualiser les résultats
+     */
+
+    await load();
+
+  }
+
+
+  /*
+   * ============================================================
+   * ACTIVATION / DÉSACTIVATION DES RESTAURANTS
+   * ============================================================
+   */
+
+  function updateRestaurantState() {
+
+    const yes =
+      document.querySelector(
+        'input[name="eats"][value="yes"]'
+      )?.checked;
+
+
+    restaurantWrap.classList.toggle(
+      "disabled",
+      !yes
+    );
+
+
+    document
+      .querySelectorAll(
+        'input[name="restaurant"]'
+      )
+      .forEach(input => {
+
+        input.disabled =
+          !yes || isClosed();
+
+        if (!yes) {
+          input.checked = false;
+        }
+
+      });
+
+  }
+
+
+  /*
+   * ============================================================
+   * ÉCOUTE DES CHANGEMENTS OUI / NON
+   * ============================================================
+   */
+
+  document
+    .querySelectorAll(
+      'input[name="eats"]'
+    )
+    .forEach(input => {
+
+      input.addEventListener(
+        "change",
+        updateRestaurantState
+      );
+
+    });
+
+
+  /*
+   * ============================================================
+   * ENVOI DU FORMULAIRE
+   * ============================================================
+   */
+
+  form.addEventListener(
+    "submit",
+    save
+  );
+
+
+  /*
+   * ============================================================
+   * MISE À JOUR EN TEMPS RÉEL
+   * ============================================================
+   *
+   * Lorsqu'une personne répond,
+   * les autres utilisateurs voient
+   * automatiquement la modification.
+   */
+
+  db
+    .channel("lunch-live")
+
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "lunch_responses"
+      },
+      payload => {
+
+        if (
+          payload.eventType === "DELETE" ||
+          payload.new?.lunch_date === today() ||
+          payload.old?.lunch_date === today()
+        ) {
+
+          load();
+
+        }
+
+      }
+    )
+
+    .subscribe();
+
+
+  /*
+   * ============================================================
+   * INITIALISATION
+   * ============================================================
+   */
+
+  applyOpenState();
+
+  updateRestaurantState();
+
+  load();
+
+
+  /*
+   * ============================================================
+   * VÉRIFICATION RÉGULIÈRE DE L'HEURE
+   * ============================================================
+   *
+   * On vérifie toutes les 30 secondes si 10h est passé.
+   */
+
+  setInterval(() => {
+
+    applyOpenState();
+
+    dateLine.textContent =
+      `Déjeuner du ${frenchDate()}`;
+
+  }, 30000);
+
+})();
+
+</script>
+
+</body>
+</html>
