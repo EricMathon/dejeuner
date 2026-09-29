@@ -243,12 +243,19 @@
 
   <header class="head">
 
-    <div id="authBox" style="margin-bottom:16px">
-  <button id="loginBtn" type="button">
-    Se connecter avec GitHub
-  </button>
+    <div id="identityBox" style="margin-bottom:16px">
+  <div class="muted">
+    Ton nom
+  </div>
 
-  <div id="userInfo" class="muted"></div>
+  <input
+    class="name"
+    id="localName"
+    maxlength="40"
+    autocomplete="name"
+    placeholder="Ex. Thomas"
+    required
+  >
   </div>
     
     <h1>🍴 Qui mange où ?</h1>
@@ -261,18 +268,7 @@
 
     <form id="form">
 
-      <label class="title" for="name">
-        Ton prénom
-      </label>
-
-      <input
-        class="name"
-        id="name"
-        maxlength="40"
-        autocomplete="name"
-        placeholder="Ex. Thomas"
-        required
-      >
+      
 
 
       <div class="field">
@@ -556,104 +552,60 @@
       SUPABASE_KEY
     );
     /*
-   * ============================================================
-   * CONNEXION GITHUB
-   * ============================================================
-   */
+ * ============================================================
+ * IDENTITÉ LOCALE
+ * ============================================================
+ */
 
-  const loginBtn =
-    document.querySelector("#loginBtn");
+function getLocalUserId() {
 
-  const userInfo =
-    document.querySelector("#userInfo");
+  let userId =
+    localStorage.getItem("dejeuner_user_id");
 
+  if (!userId) {
 
-  async function updateAuthUI() {
+    userId =
+      crypto.randomUUID();
 
-    const {
-      data: {
-        session
-      }
-    } = await db.auth.getSession();
-
-
-    if (!session) {
-
-      loginBtn.style.display = "block";
-
-      userInfo.textContent =
-        "Connecte-toi avec GitHub pour répondre.";
-
-      form.style.display = "none";
-
-      return;
-
-    }
-
-
-    loginBtn.style.display = "none";
-
-    const user =
-      session.user;
-
-
-    const username =
-      user.user_metadata?.user_name ||
-      user.user_metadata?.preferred_username ||
-      user.user_metadata?.name ||
-      user.email ||
-      "Utilisateur";
-
-
-    userInfo.textContent =
-      `Connecté en tant que ${username}`;
-
-    form.style.display = "block";
-
-
-    nameInput.value =
-      username;
-
-    nameInput.readOnly = true;
+    localStorage.setItem(
+      "dejeuner_user_id",
+      userId
+    );
 
   }
 
-
-  loginBtn.addEventListener(
-    "click",
-    async () => {
-
-      const {
-        error
-      } = await db.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          redirectTo:
-            window.location.origin +
-            window.location.pathname
-        }
-      });
+  return userId;
+}
 
 
-      if (error) {
+function getLocalName() {
 
-        message.textContent =
-          error.message;
+  return localStorage.getItem(
+    "dejeuner_name"
+  ) || "";
 
-        message.className =
-          "msg err";
-
-      }
-
-    }
-  );
+}
 
 
-  db.auth.onAuthStateChange(
-    () => {
-      updateAuthUI();
-    }
-  );
+const localNameInput =
+  document.querySelector("#localName");
+
+
+localNameInput.value =
+  getLocalName();
+
+
+localNameInput.addEventListener(
+  "input",
+  () => {
+
+    localStorage.setItem(
+      "dejeuner_name",
+      localNameInput.value.trim()
+    );
+
+  }
+);
 
 
   /*
@@ -876,69 +828,48 @@
 
   function restoreMine() {
 
-  /*
-   * L'utilisateur connecté
-   */
-  db.auth.getUser().then(({ data: { user } }) => {
+  const userId =
+    getLocalUserId();
 
-    if (!user) {
-      return;
-    }
+  const mine =
+    rows.find(
+      r => r.user_id === userId
+    );
 
-
-    /*
-     * Chercher sa réponse grâce à son user_id
-     */
-    const mine =
-      rows.find(
-        r => r.user_id === user.id
-      );
-
-
-    if (!mine) {
-      return;
-    }
-
-
-    /*
-     * Restaurer Oui / Non
-     */
-    const eatsRadio =
-      document.querySelector(
-        `input[name="eats"][value="${
-          mine.eats ? "yes" : "no"
-        }"]`
-      );
-
-    if (eatsRadio) {
-      eatsRadio.checked = true;
-    }
-
-
-    /*
-     * Restaurer le restaurant
-     */
-    if (mine.restaurant) {
-
-      document
-        .querySelectorAll(
-          'input[name="restaurant"]'
-        )
-        .forEach(input => {
-
-          input.checked =
-            input.value === mine.restaurant;
-
-        });
-
-    }
-
-
-    updateRestaurantState();
-
-  });
-  
+  if (!mine) {
+    return;
   }
+
+  const eatsRadio =
+    document.querySelector(
+      `input[name="eats"][value="${
+        mine.eats ? "yes" : "no"
+      }"]`
+    );
+
+  if (eatsRadio) {
+    eatsRadio.checked = true;
+  }
+
+  if (mine.restaurant) {
+
+    document
+      .querySelectorAll(
+        'input[name="restaurant"]'
+      )
+      .forEach(input => {
+
+        input.checked =
+          input.value === mine.restaurant;
+
+      });
+
+  }
+
+  updateRestaurantState();
+
+}
+
 
 
   /*
@@ -949,176 +880,150 @@
 
     async function save(e) {
 
-    e.preventDefault();
+  e.preventDefault();
 
-    /*
-     * Vérifier que l'utilisateur est connecté
-     */
-    const {
-      data: {
-        user
+  const userId =
+    getLocalUserId();
+
+  const name =
+    localNameInput.value.trim();
+
+
+  /*
+   * Vérifications
+   */
+
+  if (!name) {
+
+    message.textContent =
+      "Indique ton nom.";
+
+    message.className =
+      "msg err";
+
+    localNameInput.focus();
+
+    return;
+  }
+
+
+  const eatsValue =
+    document.querySelector(
+      'input[name="eats"]:checked'
+    )?.value;
+
+
+  const restaurant =
+    document.querySelector(
+      'input[name="restaurant"]:checked'
+    )?.value || null;
+
+
+  if (!eatsValue) {
+
+    message.textContent =
+      "Indique si tu manges ce midi.";
+
+    message.className =
+      "msg err";
+
+    return;
+  }
+
+
+  if (
+    eatsValue === "yes" &&
+    !restaurant
+  ) {
+
+    message.textContent =
+      "Choisis un restaurant.";
+
+    message.className =
+      "msg err";
+
+    return;
+  }
+
+
+  saveBtn.disabled = true;
+
+  message.textContent =
+    "Enregistrement…";
+
+  message.className =
+    "msg";
+
+
+  const payload = {
+
+    lunch_date:
+      today(),
+
+    user_id:
+      userId,
+
+    name:
+      name,
+
+    eats:
+      eatsValue === "yes",
+
+    restaurant:
+      eatsValue === "yes"
+        ? restaurant
+        : null,
+
+    updated_at:
+      new Date().toISOString()
+
+  };
+
+
+  const {
+    error
+  } = await db
+    .from("lunch_responses")
+    .upsert(
+      payload,
+      {
+        onConflict:
+          "lunch_date,user_id"
       }
-    } = await db.auth.getUser();
-
-    if (!user) {
-
-      message.textContent =
-        "Connecte-toi avec GitHub avant d'enregistrer.";
-
-      message.className =
-        "msg err";
-
-      return;
-    }
+    );
 
 
-    /*
-     * Nom GitHub
-     */
-    const name =
-      user.user_metadata?.user_name ||
-      user.user_metadata?.preferred_username ||
-      user.user_metadata?.name ||
-      user.email ||
-      "Utilisateur";
+  saveBtn.disabled = false;
 
 
-    const eatsValue =
-      document.querySelector(
-        'input[name="eats"]:checked'
-      )?.value;
-
-
-    const restaurant =
-      document.querySelector(
-        'input[name="restaurant"]:checked'
-      )?.value || null;
-
-
-    /*
-     * Vérifications
-     */
-
-    if (!eatsValue) {
-
-      message.textContent =
-        "Indique si tu manges ce midi.";
-
-      message.className =
-        "msg err";
-
-      return;
-    }
-
-
-    if (
-      eatsValue === "yes" &&
-      !restaurant
-    ) {
-
-      message.textContent =
-        "Choisis un restaurant.";
-
-      message.className =
-        "msg err";
-
-      return;
-    }
-
-
-    /*
-     * Bouton
-     */
-
-    saveBtn.disabled = true;
+  if (error) {
 
     message.textContent =
-      "Enregistrement…";
+      error.message;
 
     message.className =
-      "msg";
+      "msg err";
+
+    return;
+  }
 
 
-    /*
-     * Données
-     */
-
-    const payload = {
-
-      lunch_date:
-        today(),
-
-      user_id:
-        user.id,
-
-      name:
-        name,
-
-      eats:
-        eatsValue === "yes",
-
-      restaurant:
-        eatsValue === "yes"
-          ? restaurant
-          : null,
-
-      updated_at:
-        new Date().toISOString()
-
-    };
+  localStorage.setItem(
+    "dejeuner_name",
+    name
+  );
 
 
-    /*
-     * Création ou modification
-     * de SA propre réponse
-     */
+  message.textContent =
+    "Réponse enregistrée ✓";
 
-    const {
-      error
-    } = await db
-      .from("lunch_responses")
-      .upsert(
-        payload,
-        {
-          onConflict:
-            "lunch_date,user_id"
-        }
-      );
+  message.className =
+    "msg ok";
 
 
-    saveBtn.disabled = false;
+  await load();
 
-
-    if (error) {
-
-      message.textContent =
-        error.message;
-
-      message.className =
-        "msg err";
-
-      return;
-    }
-
-
-    /*
-     * Confirmation
-     */
-
-    message.textContent =
-      "Réponse enregistrée ✓";
-
-    message.className =
-      "msg ok";
-
-
-    /*
-     * Actualiser
-     */
-
-    await load();
-
-    }
+}
 
 
   /*
