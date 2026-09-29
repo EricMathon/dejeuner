@@ -37,10 +37,7 @@
       margin: 32px auto 48px;
     }
 
-    h1,
-    h2,
-    h3,
-    p {
+    h1, h2, h3, p {
       margin: 0;
     }
 
@@ -177,17 +174,31 @@
 
     .people {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 7px;
       margin-top: 10px;
     }
 
-    .pill {
+    .person {
       border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 7px 10px;
-      font-size: 14px;
+      border-radius: 10px;
+      padding: 9px 11px;
       background: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .person-name {
+      font-size: 14px;
+      font-weight: 550;
+    }
+
+    .person-info {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
     }
 
     .rowhead {
@@ -200,15 +211,6 @@
     .muted {
       color: var(--muted);
       font-size: 14px;
-    }
-
-    .notice {
-      padding: 12px 14px;
-      border-radius: 11px;
-      background: #f2f4f7;
-      color: #344054;
-      font-size: 14px;
-      margin-top: 12px;
     }
 
     @media (max-width: 560px) {
@@ -227,6 +229,10 @@
       .stat:last-child {
         grid-column: 1 / -1;
       }
+
+      .person {
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -235,7 +241,6 @@
 
 <main>
 
-  <!-- EN-TÊTE -->
   <header class="head">
     <h1>🍴 Qui mange où ?</h1>
     <p id="dateLine">Déjeuner du jour</p>
@@ -247,7 +252,6 @@
 
     <form id="form">
 
-      <!-- NOM -->
       <label class="title" for="name">
         Ton prénom
       </label>
@@ -262,7 +266,6 @@
       >
 
 
-      <!-- OUI / NON -->
       <div class="field">
 
         <label class="title">
@@ -294,7 +297,6 @@
       </div>
 
 
-      <!-- RESTAURANT -->
       <div class="field" id="restaurantWrap">
 
         <label class="title">
@@ -334,7 +336,6 @@
       </div>
 
 
-      <!-- BOUTON -->
       <button
         id="saveBtn"
         type="submit"
@@ -349,16 +350,6 @@
       ></div>
 
     </form>
-
-
-    <!-- MESSAGE APRÈS 10H -->
-    <div
-      id="closedNotice"
-      class="notice"
-      hidden
-    >
-      Les réponses sont fermées pour aujourd’hui.
-    </div>
 
   </section>
 
@@ -445,7 +436,6 @@
 </main>
 
 
-<!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -455,20 +445,17 @@
 
   /*
    * ============================================================
-   * CONFIGURATION SUPABASE
+   * SUPABASE
    * ============================================================
-   *
-   * NE MODIFIE PAS ENCORE CES DEUX LIGNES.
-   *
-   * Nous les remplirons ensemble lorsque Supabase sera configuré.
-   *
-   * IMPORTANT :
-   * Ne jamais mettre une clé "service_role" ici.
    */
 
   const SUPABASE_URL =
     "https://adpvmvyyelspuhkzphby.supabase.co";
 
+  /*
+   * Remets ici TA CLÉ SUPABASE ACTUELLE.
+   * Ne mets surtout pas une clé service_role.
+   */
   const SUPABASE_KEY =
     "sb_publishable_kSQ75fw7wAVUcfBuqYsu7Q_DaTqFGeV";
 
@@ -494,9 +481,6 @@
   const message =
     document.querySelector("#message");
 
-  const closedNotice =
-    document.querySelector("#closedNotice");
-
   const liveStatus =
     document.querySelector("#liveStatus");
 
@@ -518,7 +502,7 @@
       d.getMonth() + 1
     ).padStart(2, "0")}-${String(
       d.getDate()
-    ).padStart(2, "0")}`;
+    ).padStart(2, "0")`;
 
   }
 
@@ -549,87 +533,7 @@
 
   /*
    * ============================================================
-   * FERMETURE DES RÉPONSES À 10H
-   * ============================================================
-   *
-   * Le formulaire est disponible avant 10h.
-   * À partir de 10h00, les réponses sont bloquées.
-   */
-
-  function isClosed() {
-  return false;
-    }
-
-
-  /*
-   * ============================================================
-   * ACTIVATION / DÉSACTIVATION DU FORMULAIRE
-   * ============================================================
-   */
-
-  function applyOpenState() {
-
-    const closed = isClosed();
-
-    closedNotice.hidden = !closed;
-
-    saveBtn.disabled = closed;
-
-    form
-      .querySelectorAll("input")
-      .forEach(input => {
-        input.disabled = closed;
-      });
-
-    if (closed) {
-
-      restaurantWrap.classList.add("disabled");
-
-    } else {
-
-      restaurantWrap.classList.remove("disabled");
-
-    }
-
-  }
-
-
-  /*
-   * ============================================================
-   * VÉRIFICATION DE LA CONFIGURATION
-   * ============================================================
-   */
-
-  const configured = true;
-
-
-  /*
-   * ============================================================
-   * SI SUPABASE N'EST PAS ENCORE CONFIGURÉ
-   * ============================================================
-   */
-
-  if (!configured) {
-
-    liveStatus.textContent =
-      "⚙️ Configuration Supabase à compléter";
-
-    message.textContent =
-      "Le formulaire est prêt. Il faut maintenant connecter Supabase.";
-
-    message.className =
-      "msg err";
-
-    applyOpenState();
-
-    return;
-
-  }
-
-
-  /*
-   * ============================================================
-   * CONNEXION À SUPABASE
+   * CONNEXION SUPABASE
    * ============================================================
    */
 
@@ -655,7 +559,7 @@
 
   /*
    * ============================================================
-   * PROTECTION CONTRE LE HTML
+   * PROTECTION HTML
    * ============================================================
    */
 
@@ -677,7 +581,30 @@
 
   /*
    * ============================================================
-   * AFFICHAGE DES RÉSULTATS
+   * FORMATAGE DE L'HEURE
+   * ============================================================
+   */
+
+  function formatTime(dateString) {
+
+    if (!dateString) {
+      return "";
+    }
+
+    return new Intl.DateTimeFormat(
+      "fr-FR",
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    ).format(new Date(dateString));
+
+  }
+
+
+  /*
+   * ============================================================
+   * AFFICHAGE
    * ============================================================
    */
 
@@ -689,10 +616,6 @@
     const no =
       rows.filter(r => !r.eats);
 
-
-    /*
-     * Comptage par restaurant
-     */
 
     function count(restaurant) {
 
@@ -714,7 +637,7 @@
 
 
     /*
-     * Liste des personnes qui mangent
+     * Personnes qui mangent
      */
 
     document.querySelector("#eaters").innerHTML =
@@ -722,12 +645,20 @@
 
         ? eaters
             .map(
-              r =>
-                `<span class="pill">
-                  ${esc(r.name)}
-                  ·
-                  ${esc(r.restaurant)}
-                </span>`
+              r => `
+                <div class="person">
+
+                  <div class="person-name">
+                    ${esc(r.name)}
+                  </div>
+
+                  <div class="person-info">
+                    ${esc(r.restaurant)}
+                    · ${formatTime(r.updated_at)}
+                  </div>
+
+                </div>
+              `
             )
             .join("")
 
@@ -735,7 +666,7 @@
 
 
     /*
-     * Liste des personnes qui ne mangent pas
+     * Personnes qui ne mangent pas
      */
 
     document.querySelector("#notEaters").innerHTML =
@@ -743,10 +674,19 @@
 
         ? no
             .map(
-              r =>
-                `<span class="pill">
-                  ${esc(r.name)}
-                </span>`
+              r => `
+                <div class="person">
+
+                  <div class="person-name">
+                    ${esc(r.name)}
+                  </div>
+
+                  <div class="person-info">
+                    ${formatTime(r.updated_at)}
+                  </div>
+
+                </div>
+              `
             )
             .join("")
 
@@ -767,7 +707,7 @@
 
   /*
    * ============================================================
-   * CHARGEMENT DES RÉPONSES
+   * CHARGEMENT
    * ============================================================
    */
 
@@ -779,14 +719,14 @@
     } = await db
       .from("lunch_responses")
       .select(
-        "id,name,eats,restaurant,lunch_date"
+        "id,name,eats,restaurant,lunch_date,created_at,updated_at"
       )
       .eq(
         "lunch_date",
         today()
       )
       .order(
-        "created_at",
+        "updated_at",
         {
           ascending: true
         }
@@ -822,7 +762,7 @@
 
   /*
    * ============================================================
-   * RESTAURATION DU NOM DE L'UTILISATEUR
+   * RETROUVER MA RÉPONSE
    * ============================================================
    */
 
@@ -875,16 +815,16 @@
 
     if (mine.restaurant) {
 
-      const restaurantRadio =
-        document.querySelector(
-          `input[name="restaurant"][value="${CSS.escape(
-            mine.restaurant
-          )}"]`
-        );
+      document
+        .querySelectorAll(
+          'input[name="restaurant"]'
+        )
+        .forEach(input => {
 
-      if (restaurantRadio) {
-        restaurantRadio.checked = true;
-      }
+          input.checked =
+            input.value === mine.restaurant;
+
+        });
 
     }
 
@@ -896,7 +836,7 @@
 
   /*
    * ============================================================
-   * ENREGISTREMENT D'UNE RÉPONSE
+   * ENREGISTREMENT / MODIFICATION
    * ============================================================
    */
 
@@ -904,19 +844,6 @@
 
     e.preventDefault();
 
-
-    /*
-     * Sécurité supplémentaire
-     */
-
-    if (isClosed()) {
-      return;
-    }
-
-
-    /*
-     * Récupération des valeurs
-     */
 
     const name =
       nameInput.value.trim();
@@ -933,17 +860,10 @@
 
 
     /*
-     * Vérification
+     * Vérifications
      */
 
-    if (
-      !name ||
-      !eatsValue ||
-      (
-        eatsValue === "yes" &&
-        !restaurant
-      )
-    ) {
+    if (!name || !eatsValue) {
 
       message.textContent =
         "Complète les informations avant d'enregistrer.";
@@ -956,8 +876,24 @@
     }
 
 
+    if (
+      eatsValue === "yes" &&
+      !restaurant
+    ) {
+
+      message.textContent =
+        "Choisis un restaurant.";
+
+      message.className =
+        "msg err";
+
+      return;
+
+    }
+
+
     /*
-     * Désactiver le bouton pendant l'enregistrement
+     * Bouton
      */
 
     saveBtn.disabled = true;
@@ -970,7 +906,10 @@
 
 
     /*
-     * Données à envoyer à Supabase
+     * Données
+     *
+     * updated_at est volontairement mis à jour
+     * à chaque nouvelle réponse ou modification.
      */
 
     const payload = {
@@ -987,15 +926,19 @@
       restaurant:
         eatsValue === "yes"
           ? restaurant
-          : null
+          : null,
+
+      updated_at:
+        new Date().toISOString()
 
     };
 
 
     /*
-     * Une seule réponse par prénom et par jour.
-     * Si la personne répond à nouveau,
-     * sa réponse est mise à jour.
+     * UPSERT :
+     *
+     * - première réponse → création
+     * - même prénom le même jour → modification
      */
 
     const {
@@ -1014,10 +957,6 @@
     saveBtn.disabled = false;
 
 
-    /*
-     * Gestion de l'erreur
-     */
-
     if (error) {
 
       message.textContent =
@@ -1032,7 +971,7 @@
 
 
     /*
-     * Mémoriser le prénom dans le navigateur
+     * Mémoriser le prénom
      */
 
     localStorage.setItem(
@@ -1042,7 +981,7 @@
 
 
     /*
-     * Message de confirmation
+     * Confirmation
      */
 
     message.textContent =
@@ -1053,7 +992,7 @@
 
 
     /*
-     * Actualiser les résultats
+     * Actualiser
      */
 
     await load();
@@ -1063,7 +1002,7 @@
 
   /*
    * ============================================================
-   * ACTIVATION / DÉSACTIVATION DES RESTAURANTS
+   * GESTION OUI / NON
    * ============================================================
    */
 
@@ -1087,8 +1026,7 @@
       )
       .forEach(input => {
 
-        input.disabled =
-          !yes || isClosed();
+        input.disabled = !yes;
 
         if (!yes) {
           input.checked = false;
@@ -1098,12 +1036,6 @@
 
   }
 
-
-  /*
-   * ============================================================
-   * ÉCOUTE DES CHANGEMENTS OUI / NON
-   * ============================================================
-   */
 
   document
     .querySelectorAll(
@@ -1121,7 +1053,7 @@
 
   /*
    * ============================================================
-   * ENVOI DU FORMULAIRE
+   * FORMULAIRE
    * ============================================================
    */
 
@@ -1133,12 +1065,8 @@
 
   /*
    * ============================================================
-   * MISE À JOUR EN TEMPS RÉEL
+   * TEMPS RÉEL
    * ============================================================
-   *
-   * Lorsqu'une personne répond,
-   * les autres utilisateurs voient
-   * automatiquement la modification.
    */
 
   db
@@ -1153,10 +1081,16 @@
       },
       payload => {
 
+        const newDate =
+          payload.new?.lunch_date;
+
+        const oldDate =
+          payload.old?.lunch_date;
+
+
         if (
-          payload.eventType === "DELETE" ||
-          payload.new?.lunch_date === today() ||
-          payload.old?.lunch_date === today()
+          newDate === today() ||
+          oldDate === today()
         ) {
 
           load();
@@ -1175,29 +1109,9 @@
    * ============================================================
    */
 
-  applyOpenState();
-
   updateRestaurantState();
 
   load();
-
-
-  /*
-   * ============================================================
-   * VÉRIFICATION RÉGULIÈRE DE L'HEURE
-   * ============================================================
-   *
-   * On vérifie toutes les 30 secondes si 10h est passé.
-   */
-
-  setInterval(() => {
-
-    applyOpenState();
-
-    dateLine.textContent =
-      `Déjeuner du ${frenchDate()}`;
-
-  }, 30000);
 
 })();
 
